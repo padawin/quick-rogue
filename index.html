@@ -49,7 +49,7 @@ will end up losing a <3....
 
 		for (var e = 0; e < 5; ++e) {
 			var ePos = Math.floor(Math.random() * spawnables.length);
-			var eCoord = {x: Math.floor(spawnables[ePos] / 10), y: spawnables[ePos] % 10};
+			var eCoord = {x: spawnables[ePos] % 10, y: Math.floor(spawnables[ePos] / 10)};
 			_dungeon.grid[eCoord.y][eCoord.x] = 4;
 			spawnables.splice(ePos, 1);
 			_dungeon.enemies.push(eCoord);

@@ -1,0 +1,196 @@
+<html>
+<head>
+</head>
+<body>
+<pre id="myCanvas"></pre>
+<button id="up">Up</button>
+<button id="down">Down</button>
+<button id="left">Left</button>
+<button id="right">Right</button>
+<script type="text/javascript">
+	var dungeon = function () {
+		var _dungeon = {grid: [
+			[1,1,1,1,1,1,1,1,1,1],
+				[1,0,0,0,0,0,0,0,3,1],
+				[1,0,0,0,0,0,0,0,0,1],
+				[1,0,0,0,0,0,0,0,0,1],
+				[1,0,0,0,0,0,0,0,0,1],
+				[1,0,0,0,0,0,0,0,0,1],
+				[1,0,0,0,0,0,0,0,0,1],
+				[1,0,0,0,0,0,0,0,0,1],
+				[1,0,0,0,0,0,0,0,0,1],
+				[1,1,1,1,1,1,1,1,1,1]
+					],
+				enemies: [],
+				player: null};
+
+		var spawnables = [
+			11,12,13,14,15,16,17,
+			21,22,23,24,25,26,27,28,
+			31,32,33,34,35,36,37,38,
+			41,42,43,44,45,46,47,48,
+			51,52,53,54,55,56,57,58,
+			61,62,63,64,65,66,67,68,
+			71,72,73,74,75,76,77,78,
+			81,82,83,84,85,86,87,88
+				];
+		var playerPos = Math.floor(Math.random() * spawnables.length);
+		_dungeon.player = {life: 3, x: spawnables[playerPos] % 10, y: Math.floor(spawnables[playerPos] / 10)};
+		_dungeon.grid[_dungeon.player.y][_dungeon.player.x] = 2;
+		spawnables.splice(playerPos, 1);
+
+		for (var e = 0; e < 5; ++e) {
+			var ePos = Math.floor(Math.random() * spawnables.length);
+			var eCoord = {x: Math.floor(spawnables[ePos] / 10), y: spawnables[ePos] % 10};
+			_dungeon.grid[eCoord.y][eCoord.x] = 4;
+			spawnables.splice(ePos, 1);
+			_dungeon.enemies.push(eCoord);
+		}
+		return _dungeon;
+	};
+
+var d = dungeon();
+var canvas = document.getElementById("myCanvas");
+var state = 'playing';
+
+function attack(x, y) {
+	if (d.grid[y][x] == 4) {
+		var e = 0;
+		while (e < d.enemies.length) {
+			if (d.enemies[e].x == x && d.enemies[e].y == y) {
+				d.enemies.splice(e, 1);
+			}
+			else {
+				++e;
+			}
+		}
+		d.grid[y][x] = 0;
+		return true;
+	}
+
+	return false;
+}
+
+function update () {
+	var enemiesAround = 0;
+	enemiesAround += d.grid[d.player.y - 1][d.player.x] == 4;
+	enemiesAround += d.grid[d.player.y + 1][d.player.x] == 4;
+	enemiesAround += d.grid[d.player.y][d.player.x - 1] == 4;
+	enemiesAround += d.grid[d.player.y][d.player.x + 1] == 4;
+
+	d.player.life = Math.max(0, d.player.life - enemiesAround);
+
+	if (d.player.life == 0) {state = "lost";return;}
+	for (var eIndex in d.enemies) {
+		var enemy = d.enemies[eIndex];
+		var directions = orderDirectionsFromPlayer(enemy);
+		while (directions.length) {
+			var dir = directions.shift();
+			if (d.grid[dir.y][dir.x] == 0) {
+				d.grid[enemy.y][enemy.x] = 0;
+				enemy.x = dir.x;
+				enemy.y = dir.y;
+				d.grid[enemy.y][enemy.x] = 4;
+				break;
+			}
+			if (d.grid[dir.y][dir.x] == 2) {directions = [];}
+		}
+	}
+}
+
+function orderDirectionsFromPlayer(enemy) {
+	var directions = [
+	{x: enemy.x, y: enemy.y - 1},
+	{x: enemy.x, y: enemy.y + 1},
+	{x: enemy.x - 1, y: enemy.y},
+	{x: enemy.x + 1, y: enemy.y}
+	];
+
+	directions.sort(function (a, b) {
+			return Math.sqrt(Math.pow(a.x - d.player.x, 2) + Math.pow(a.y - d.player.y, 2)) < Math.sqrt(Math.pow(b.x - d.player.x, 2) + Math.pow(b.y - d.player.y, 2)) ? -1 : 1;
+			});
+	return directions;
+}
+
+function render() {
+	if (state == 'won') {canvas.innerHTML = "you won";return;}
+	if (state == 'lost') {canvas.innerHTML = "you lost";return;}
+	canvas.innerHTML = "";
+	for (var j = 0; j < 10; ++j) {
+		for (var i = 0; i < 10; ++i) {
+			if (d.grid[j][i] == 0) {
+				canvas.innerHTML += " ";
+			}
+			else if (d.grid[j][i] == 1) {
+				canvas.innerHTML += "#";
+			}
+			else if (d.grid[j][i] == 2) {
+				canvas.innerHTML += "P";
+			}
+			else if (d.grid[j][i] == 3) {
+				canvas.innerHTML += "X";
+			}
+			else if (d.grid[j][i] == 4) {
+				canvas.innerHTML += "E";
+			}
+		}
+		canvas.innerHTML += "\n";
+	}
+	for (var l = 0; l < d.player.life; ++l) {
+		canvas.innerHTML += "<3";
+	}
+}
+
+function step () {
+	update();
+	render();
+}
+
+document.getElementById("up").onclick = function () {
+	if (d.player.y == 1) {return;}
+	if (!attack(d.player.x, d.player.y - 1)) {
+		if (d.grid[d.player.y - 1][d.player.x] == 3) {state = "won";}
+		d.grid[d.player.y][d.player.x] = 0;
+		d.player.y -= 1;
+		d.grid[d.player.y][d.player.x] = 2;
+	}
+	step();
+}
+
+document.getElementById("down").onclick = function () {
+	if (d.player.y == 8) {return;}
+	if (!attack(d.player.x, d.player.y + 1)) {
+		if (d.grid[d.player.y + 1][d.player.x] == 3) {state = "won";}
+		d.grid[d.player.y][d.player.x] = 0;
+		d.player.y += 1;
+		d.grid[d.player.y][d.player.x] = 2;
+	}
+	step();
+}
+
+document.getElementById("left").onclick = function () {
+	if (d.player.x == 1) {return;}
+	if (!attack(d.player.x - 1, d.player.y)) {
+		if (d.grid[d.player.y][d.player.x - 1] == 3) {state = "won";}
+		d.grid[d.player.y][d.player.x] = 0;
+		d.player.x -= 1;
+		d.grid[d.player.y][d.player.x] = 2;
+	}
+	step();
+}
+
+document.getElementById("right").onclick = function () {
+	if (d.player.x == 8) {return;}
+	if (!attack(d.player.x + 1, d.player.y)) {
+		if (d.grid[d.player.y][d.player.x + 1] == 3) {state = "won";}
+		d.grid[d.player.y][d.player.x] = 0;
+		d.player.x += 1;
+		d.grid[d.player.y][d.player.x] = 2;
+	}
+	step();
+}
+
+render();
+</script>
+</body>
+</html>
